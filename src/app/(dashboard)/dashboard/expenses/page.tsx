@@ -26,8 +26,8 @@ export default function ExpensesPage() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const { month, year } = currentMonth();
-  const [filterMonth, setFilterMonth] = useState(String(month));
-  const [filterYear, setFilterYear] = useState(String(year));
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterYear, setFilterYear] = useState("");
   const [filterSite, setFilterSite] = useState("");
   const [form, setForm] = useState({ ...emptyForm, month: String(month), year: String(year) });
 
@@ -97,16 +97,19 @@ export default function ExpensesPage() {
     load();
   }
 
-  const mStart = `${filterYear}-${String(filterMonth).padStart(2, "0")}-01`;
-  const mEnd = new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0];
-
   const filteredExp = expenses.filter(e =>
-    e.month === parseInt(filterMonth) && e.year === parseInt(filterYear) &&
+    (!filterMonth || e.month === parseInt(filterMonth)) &&
+    (!filterYear || e.year === parseInt(filterYear)) &&
     (!filterSite || e.site_id === filterSite)
   );
   const totalExpenses = filteredExp.reduce((s, e) => s + e.internet_cost + e.electricity + e.rent + e.maintenance + e.other, 0);
 
-  const periodSales = sales.filter(s => s.date >= mStart && s.date <= mEnd && (!filterSite || s.site_id === filterSite));
+  const periodSales = sales.filter(s => {
+    const inYear = !filterYear || s.date.startsWith(filterYear);
+    const inMonth = !filterMonth || s.date.slice(5, 7) === String(filterMonth).padStart(2, "0");
+    const inSite = !filterSite || s.site_id === filterSite;
+    return inYear && inMonth && inSite;
+  });
   const grossRevenue = periodSales.reduce((s, r) => s + r.total_revenue, 0);
   const netProfit = grossRevenue - totalExpenses;
 
@@ -202,12 +205,14 @@ export default function ExpensesPage() {
       <div className="flex flex-wrap gap-3">
         <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none">
+          <option value="">All Months</option>
           {Array.from({ length: 12 }, (_, i) => (
             <option key={i + 1} value={i + 1}>{new Date(2000, i).toLocaleString("default", { month: "long" })}</option>
           ))}
         </select>
         <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none">
+          <option value="">All Years</option>
           {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         <select value={filterSite} onChange={e => setFilterSite(e.target.value)}
