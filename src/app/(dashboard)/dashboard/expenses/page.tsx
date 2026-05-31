@@ -139,7 +139,7 @@ export default function ExpensesPage() {
       {loading ? <Spinner /> : (
         <>
           {/* Profit summary */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
               <p className="text-slate-400 text-xs uppercase tracking-wide">Gross Revenue</p>
               <p className="text-2xl font-bold text-white mt-1">{formatCurrency(grossRevenue)}</p>
