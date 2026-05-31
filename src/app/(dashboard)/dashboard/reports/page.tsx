@@ -31,17 +31,11 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const monthStart = filterYear
-    ? (filterMonth ? `${filterYear}-${String(filterMonth).padStart(2, "0")}-01` : `${filterYear}-01-01`)
-    : "2000-01-01";
-  const monthEnd = filterYear
-    ? (filterMonth ? new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0] : `${filterYear}-12-31`)
-    : "2099-12-31";
-
   const filtered = sales.filter(s => {
     const inSite = !filterSite || s.site_id === filterSite;
-    const inPeriod = s.date >= monthStart && s.date <= monthEnd;
-    return inSite && inPeriod;
+    const inYear = !filterYear || s.date.startsWith(filterYear);
+    const inMonth = !filterMonth || s.date.slice(5, 7) === String(filterMonth).padStart(2, "0");
+    return inSite && inYear && inMonth;
   });
 
   // Monthly aggregation per site
