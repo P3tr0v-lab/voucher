@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner, EmptyState } from "@/components/ui/States";
 import { formatDate, formatCurrency, todayISO } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import type { Site, VoucherBatch } from "@/lib/types";
 
 export default function BatchesPage() {
@@ -12,6 +12,7 @@ export default function BatchesPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<(VoucherBatch & { sites: Site }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -38,21 +39,44 @@ export default function BatchesPage() {
   async function save() {
     if (!form.site_id || !form.batch_name || !form.quantity_received) return;
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
     const qty = parseInt(form.quantity_received);
-    await supabase.from("voucher_batches").insert({
-      site_id: form.site_id,
-      batch_name: form.batch_name,
-      voucher_type: form.voucher_type,
-      quantity_received: qty,
-      quantity_remaining: qty,
-      purchase_date: form.purchase_date,
-      notes: form.notes || null,
-      is_exhausted: false,
-      user_id: user!.id,
-    });
+
+    if (editingBatch) {
+      // quantity already sold = received - remaining
+      const alreadySold = editingBatch.quantity_received - editingBatch.quantity_remaining;
+      if (qty < alreadySold) {
+        alert(`Cannot set quantity below already sold amount (${alreadySold} sold).`);
+        setSaving(false);
+        return;
+      }
+      const newRemaining = qty - alreadySold;
+      await supabase.from("voucher_batches").update({
+        site_id: form.site_id,
+        batch_name: form.batch_name,
+        voucher_type: form.voucher_type,
+        quantity_received: qty,
+        quantity_remaining: newRemaining,
+        is_exhausted: newRemaining === 0,
+        purchase_date: form.purchase_date,
+        notes: form.notes || null,
+      }).eq("id", editingBatch.id);
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("voucher_batches").insert({
+        site_id: form.site_id,
+        batch_name: form.batch_name,
+        voucher_type: form.voucher_type,
+        quantity_received: qty,
+        quantity_remaining: qty,
+        purchase_date: form.purchase_date,
+        notes: form.notes || null,
+        is_exhausted: false,
+        user_id: user!.id,
+      });
+    }
     setSaving(false);
     setShowForm(false);
+    setEditingBatch(null);
     setForm({ site_id: "", batch_name: "", voucher_type: "500", quantity_received: "", purchase_date: todayISO(), notes: "" });
     load();
   }
@@ -70,7 +94,7 @@ export default function BatchesPage() {
           <h1 className="text-2xl font-bold text-white">Voucher Batches</h1>
           <p className="text-slate-400 text-sm">Manage stock batches per site</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
+        <button onClick={() => { setEditingBatch(null); setForm({ site_id: "", batch_name: "", voucher_type: "500", quantity_received: "", purchase_date: todayISO(), notes: "" }); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
           <Plus className="w-4 h-4" /> Add Batch
         </button>
       </div>
@@ -91,7 +115,7 @@ export default function BatchesPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700">
-            <h2 className="text-lg font-semibold text-white mb-4">Add Voucher Batch</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">{editingBatch ? "Edit Batch" : "Add Voucher Batch"}</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm text-slate-300 mb-1">Site</label>
@@ -116,7 +140,7 @@ export default function BatchesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-slate-300 mb-1">Quantity</label>
+                <label className="block text-sm text-slate-300 mb-1">Quantity{editingBatch && <span className="text-slate-500 ml-1 text-xs">(min: {editingBatch.quantity_received - editingBatch.quantity_remaining} already sold)</span>}</label>
                 <input type="number" min="1" value={form.quantity_received} onChange={e => setForm(f => ({ ...f, quantity_received: e.target.value }))}
                   placeholder="e.g. 100"
                   className="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -134,10 +158,10 @@ export default function BatchesPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
+              <button onClick={() => { setShowForm(false); setEditingBatch(null); }} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
               <button onClick={save} disabled={saving || !form.site_id || !form.batch_name || !form.quantity_received}
                 className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:opacity-50">
-                {saving ? "Saving..." : "Add Batch"}
+                {saving ? "Saving..." : editingBatch ? "Update" : "Add Batch"}
               </button>
             </div>
           </div>
@@ -178,9 +202,18 @@ export default function BatchesPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-lg hover:bg-red-900/40 text-red-400 transition">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button onClick={() => {
+                        setEditingBatch(b);
+                        setForm({ site_id: b.site_id, batch_name: b.batch_name, voucher_type: b.voucher_type, quantity_received: String(b.quantity_received), purchase_date: b.purchase_date, notes: b.notes || "" });
+                        setShowForm(true);
+                      }} className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 transition">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-lg hover:bg-red-900/40 text-red-400 transition">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

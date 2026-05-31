@@ -12,7 +12,7 @@ export default function ReportsPage() {
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterSite, setFilterSite] = useState("");
-  const [filterMonth, setFilterMonth] = useState(String(currentMonth().month));
+  const [filterMonth, setFilterMonth] = useState("");
   const [filterYear, setFilterYear] = useState(String(currentMonth().year));
 
   const supabase = createClient();
@@ -31,13 +31,15 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const monthStart = `${filterYear}-${String(filterMonth).padStart(2, "0")}-01`;
-  const monthEnd = new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0];
+  const monthStart = filterMonth ? `${filterYear}-${String(filterMonth).padStart(2, "0")}-01` : `${filterYear}-01-01`;
+  const monthEnd = filterMonth
+    ? new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0]
+    : `${filterYear}-12-31`;
 
   const filtered = sales.filter(s => {
     const inSite = !filterSite || s.site_id === filterSite;
-    const inMonth = s.date >= monthStart && s.date <= monthEnd;
-    return inSite && inMonth;
+    const inPeriod = s.date >= monthStart && s.date <= monthEnd;
+    return inSite && inPeriod;
   });
 
   // Monthly aggregation per site
@@ -100,6 +102,7 @@ export default function ReportsPage() {
         </select>
         <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none">
+          <option value="">All Months</option>
           {Array.from({ length: 12 }, (_, i) => (
             <option key={i + 1} value={i + 1}>{new Date(2000, i).toLocaleString("default", { month: "long" })}</option>
           ))}
