@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner, EmptyState } from "@/components/ui/States";
 import { formatDate, formatCurrency, todayISO } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { Site, VoucherBatch } from "@/lib/types";
 
 export default function BatchesPage() {
@@ -13,6 +13,7 @@ export default function BatchesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState({
     site_id: "", batch_name: "", voucher_type: "500",
     quantity_received: "", purchase_date: todayISO(), notes: ""
@@ -56,6 +57,12 @@ export default function BatchesPage() {
     load();
   }
 
+  async function deleteBatch(id: string) {
+    await supabase.from("voucher_batches").delete().eq("id", id);
+    setConfirmDelete(null);
+    load();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -67,6 +74,19 @@ export default function BatchesPage() {
           <Plus className="w-4 h-4" /> Add Batch
         </button>
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-sm border border-slate-700">
+            <h2 className="text-lg font-semibold text-white mb-2">Delete Batch?</h2>
+            <p className="text-slate-400 text-sm mb-5">This will permanently delete this batch. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
+              <button onClick={() => deleteBatch(confirmDelete)} className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -136,6 +156,7 @@ export default function BatchesPage() {
                 <th className="px-4 py-3 text-right">Remaining</th>
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -155,6 +176,11 @@ export default function BatchesPage() {
                     <Badge variant={b.is_exhausted ? "danger" : b.quantity_remaining < 10 ? "warning" : "success"}>
                       {b.is_exhausted ? "Exhausted" : b.quantity_remaining < 10 ? "Low Stock" : "Active"}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-lg hover:bg-red-900/40 text-red-400 transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

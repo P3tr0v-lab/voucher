@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner, EmptyState } from "@/components/ui/States";
 import { formatDate } from "@/lib/utils";
-import { Plus, Pencil, PowerOff } from "lucide-react";
+import { Plus, Pencil, PowerOff, Trash2 } from "lucide-react";
 import type { Site } from "@/lib/types";
 
 export default function SitesPage() {
@@ -14,6 +14,7 @@ export default function SitesPage() {
   const [editing, setEditing] = useState<Site | null>(null);
   const [form, setForm] = useState({ name: "", location: "", description: "" });
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Site | null>(null);
 
   const supabase = createClient();
 
@@ -48,6 +49,12 @@ export default function SitesPage() {
     load();
   }
 
+  async function deleteSite(site: Site) {
+    await supabase.from("sites").delete().eq("id", site.id);
+    setConfirmDelete(null);
+    load();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,6 +66,21 @@ export default function SitesPage() {
           <Plus className="w-4 h-4" /> Add Site
         </button>
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-sm border border-slate-700">
+            <h2 className="text-lg font-semibold text-white mb-2">Delete Site?</h2>
+            <p className="text-slate-400 text-sm mb-5">
+              This will permanently delete <span className="text-white font-medium">{confirmDelete.name}</span> and all its batches, sales, and expenses. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
+              <button onClick={() => deleteSite(confirmDelete)} className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -106,12 +128,15 @@ export default function SitesPage() {
               </div>
               {site.description && <p className="text-slate-500 text-xs mb-3">{site.description}</p>}
               <p className="text-slate-600 text-xs mb-4">Created {formatDate(site.created_at)}</p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => openEdit(site)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs transition">
                   <Pencil className="w-3 h-3" /> Edit
                 </button>
                 <button onClick={() => toggleStatus(site)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs transition">
                   <PowerOff className="w-3 h-3" /> {site.status === "active" ? "Disable" : "Enable"}
+                </button>
+                <button onClick={() => setConfirmDelete(site)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 text-red-400 text-xs transition">
+                  <Trash2 className="w-3 h-3" /> Delete
                 </button>
               </div>
             </div>

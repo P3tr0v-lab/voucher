@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner, EmptyState } from "@/components/ui/States";
 import { formatDate, formatCurrency, todayISO } from "@/lib/utils";
-import { Plus, Calculator } from "lucide-react";
+import { Plus, Calculator, Trash2 } from "lucide-react";
 import type { Site, DailySale } from "@/lib/types";
 
 export default function SalesPage() {
@@ -13,6 +13,7 @@ export default function SalesPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterSite, setFilterSite] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState({ site_id: "", date: todayISO(), used_500: "0", used_1000: "0", notes: "" });
 
   const supabase = createClient();
@@ -55,6 +56,12 @@ export default function SalesPage() {
       setForm({ site_id: "", date: todayISO(), used_500: "0", used_1000: "0", notes: "" });
       load();
     }
+  }
+
+  async function deleteSale(id: string) {
+    await supabase.from("daily_sales").delete().eq("id", id);
+    setConfirmDelete(null);
+    load();
   }
 
   const filtered = filterSite ? sales.filter((s: any) => s.site_id === filterSite) : sales;
@@ -132,6 +139,19 @@ export default function SalesPage() {
         </div>
       )}
 
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-sm border border-slate-700">
+            <h2 className="text-lg font-semibold text-white mb-2">Delete Sale Record?</h2>
+            <p className="text-slate-400 text-sm mb-5">This will permanently delete this daily sales record. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
+              <button onClick={() => deleteSale(confirmDelete)} className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filter */}
       <div className="flex gap-3">
         <select value={filterSite} onChange={e => setFilterSite(e.target.value)}
@@ -154,6 +174,7 @@ export default function SalesPage() {
                 <th className="px-4 py-3 text-right">Rev 1000</th>
                 <th className="px-4 py-3 text-right">Total</th>
                 <th className="px-4 py-3 text-left">Notes</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -167,6 +188,11 @@ export default function SalesPage() {
                   <td className="px-4 py-3 text-right text-slate-400">{formatCurrency(s.revenue_1000)}</td>
                   <td className="px-4 py-3 text-right text-green-400 font-medium">{formatCurrency(s.total_revenue)}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{s.notes || "-"}</td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => setConfirmDelete(s.id)} className="p-1.5 rounded-lg hover:bg-red-900/40 text-red-400 transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
