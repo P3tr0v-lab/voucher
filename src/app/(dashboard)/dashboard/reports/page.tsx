@@ -13,7 +13,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [filterSite, setFilterSite] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
-  const [filterYear, setFilterYear] = useState(String(currentMonth().year));
+  const [filterYear, setFilterYear] = useState("");
 
   const supabase = createClient();
 
@@ -31,10 +31,12 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const monthStart = filterMonth ? `${filterYear}-${String(filterMonth).padStart(2, "0")}-01` : `${filterYear}-01-01`;
-  const monthEnd = filterMonth
-    ? new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0]
-    : `${filterYear}-12-31`;
+  const monthStart = filterYear
+    ? (filterMonth ? `${filterYear}-${String(filterMonth).padStart(2, "0")}-01` : `${filterYear}-01-01`)
+    : "2000-01-01";
+  const monthEnd = filterYear
+    ? (filterMonth ? new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0] : `${filterYear}-12-31`)
+    : "2099-12-31";
 
   const filtered = sales.filter(s => {
     const inSite = !filterSite || s.site_id === filterSite;
@@ -109,6 +111,7 @@ export default function ReportsPage() {
         </select>
         <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none">
+          <option value="">All Years</option>
           {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         <div className="flex rounded-lg overflow-hidden border border-slate-700">
