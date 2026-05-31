@@ -115,8 +115,16 @@ export default function ExpensesPage() {
 
   // Per-site profit breakdown
   const siteBreakdown = sites.map(site => {
-    const siteExp = expenses.filter(e => e.month === parseInt(filterMonth) && e.year === parseInt(filterYear) && e.site_id === site.id);
-    const siteSales = sales.filter(s => s.date >= mStart && s.date <= mEnd && s.site_id === site.id);
+    const siteExp = expenses.filter(e =>
+      (!filterMonth || e.month === parseInt(filterMonth)) &&
+      (!filterYear || e.year === parseInt(filterYear)) &&
+      e.site_id === site.id
+    );
+    const siteSales = sales.filter(s => {
+      const inYear = !filterYear || s.date.startsWith(filterYear);
+      const inMonth = !filterMonth || s.date.slice(5, 7) === String(filterMonth).padStart(2, "0");
+      return inYear && inMonth && s.site_id === site.id;
+    });
     const rev = siteSales.reduce((s, r) => s + r.total_revenue, 0);
     const exp = siteExp.reduce((s, e) => s + e.internet_cost + e.electricity + e.rent + e.maintenance + e.other, 0);
     return { site, rev, exp, profit: rev - exp };
