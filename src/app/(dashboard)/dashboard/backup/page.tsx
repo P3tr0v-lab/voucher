@@ -19,7 +19,10 @@ export default function BackupPage() {
       supabase.from("sites").select("*").eq("user_id", uid),
       supabase.from("voucher_batches").select("*").eq("user_id", uid),
       supabase.from("daily_sales").select("*").eq("user_id", uid),
-      supabase.from("batch_consumption").select("*"),
+      supabase.from("batch_consumption").select("*").in(
+        "daily_sale_id",
+        (await supabase.from("daily_sales").select("id").eq("user_id", uid)).data?.map((s: any) => s.id) || []
+      ),
       supabase.from("expenses").select("*").eq("user_id", uid),
     ]);
 

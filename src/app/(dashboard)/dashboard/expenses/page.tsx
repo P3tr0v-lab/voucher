@@ -54,7 +54,7 @@ export default function ExpensesPage() {
   const totalExpenses = filteredExp.reduce((s, e) => s + e.internet_cost + e.electricity + e.rent + e.maintenance + e.other, 0);
 
   const mStart = `${filterYear}-${String(filterMonth).padStart(2, "0")}-01`;
-  const mEnd = `${filterYear}-${String(filterMonth).padStart(2, "0")}-31`;
+  const mEnd = new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0];
   const grossRevenue = sales.filter(s => s.date >= mStart && s.date <= mEnd).reduce((s, r) => s + r.total_revenue, 0);
   const netProfit = grossRevenue - totalExpenses;
 

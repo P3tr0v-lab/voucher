@@ -12,6 +12,7 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [filterSite, setFilterSite] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState({ site_id: "", date: todayISO(), used_500: "0", used_1000: "0", notes: "" });
@@ -39,6 +40,7 @@ export default function SalesPage() {
   async function save() {
     if (!form.site_id || !form.date) return;
     setSaving(true);
+    setSaveError("");
     const res = await fetch("/api/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -50,11 +52,15 @@ export default function SalesPage() {
         notes: form.notes,
       }),
     });
+    const json = await res.json();
     setSaving(false);
     if (res.ok) {
       setShowForm(false);
+      setSaveError("");
       setForm({ site_id: "", date: todayISO(), used_500: "0", used_1000: "0", notes: "" });
       load();
+    } else {
+      setSaveError(json.error || "Failed to record sales");
     }
   }
 
@@ -128,8 +134,11 @@ export default function SalesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
+            {saveError && (
+              <div className="mt-3 p-3 rounded-lg bg-red-900/40 border border-red-700 text-red-300 text-sm">{saveError}</div>
+            )}
+            <div className="flex gap-3 mt-3">
+              <button onClick={() => { setShowForm(false); setSaveError(""); }} className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel</button>
               <button onClick={save} disabled={saving || !form.site_id || !form.date}
                 className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:opacity-50">
                 {saving ? "Saving..." : "Record"}

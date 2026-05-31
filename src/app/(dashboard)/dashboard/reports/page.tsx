@@ -32,7 +32,7 @@ export default function ReportsPage() {
   useEffect(() => { load(); }, []);
 
   const monthStart = `${filterYear}-${String(filterMonth).padStart(2, "0")}-01`;
-  const monthEnd = `${filterYear}-${String(filterMonth).padStart(2, "0")}-31`;
+  const monthEnd = new Date(parseInt(filterYear), parseInt(filterMonth), 0).toISOString().split("T")[0];
 
   const filtered = sales.filter(s => {
     const inSite = !filterSite || s.site_id === filterSite;
